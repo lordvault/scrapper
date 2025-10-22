@@ -2,7 +2,7 @@ import asyncio
 from pydoll.browser.chromium import Chrome
 from pydoll.exceptions import ElementNotFound
 from PIL import Image, ImageChops
-import image_utils
+import image_utils, nombres_utils
 from google import genai
 import imagehash
 from flask import Flask, request, jsonify
@@ -61,7 +61,7 @@ async def adres_search(cc):
             if tries >= 3:
                 await tab.close()
                 await browser.stop()
-                return "ERROR",cc,"Captcha no solucionado", None, None, None, None
+                return "ERROR",cc,"Captcha no solucionado", None, None, None, None, None
 
 
         tab_respuesta = None
@@ -93,20 +93,26 @@ async def adres_search(cc):
                 await tab_respuesta.close()
                 await tab.close()
                 await browser.stop()
-                return "SUCCESS", cc, error_value, base64_screenshot, None, None, None
+                return "SUCCESS", cc, error_value, base64_screenshot, None, None, None, None
             else:
                 estado_tag = await tab_respuesta.query('//*[@id="GridViewAfiliacion"]/tbody/tr[2]/td[1]')
                 entidad_tag = await tab_respuesta.query('//*[@id="GridViewAfiliacion"]/tbody/tr[2]/td[2]')
                 regimen_tag = await tab_respuesta.query('//*[@id="GridViewAfiliacion"]/tbody/tr[2]/td[3]')
+                nombres_tag = await tab_respuesta.query('//*[@id="GridViewBasica"]/tbody/tr[4]/td[2]')
+                apellidos_tag = await tab_respuesta.query('//*[@id="GridViewBasica"]/tbody/tr[5]/td[2]')
 
                 estado  = await estado_tag.text
                 entidad = await entidad_tag.text
                 regimen = await regimen_tag.text
+                nombres = await nombres_tag.text
+                apellidos = await apellidos_tag.text
 
                 await tab_respuesta.close()
                 await tab.close()
                 await browser.stop()
-                return "SUCCESS", cc, "", base64_screenshot, estado, entidad, regimen
+                nombre_completo = nombres +" "+ apellidos
+                app.logger.info(nombre_completo)
+                return "SUCCESS", cc, "", base64_screenshot, estado, entidad, regimen, nombres_utils.parsearNombre(nombre_completo)
         
 
         await asyncio.sleep(3)
@@ -179,7 +185,7 @@ def trim(im):
 @app.route('/login', methods=['GET'])
 def login():
     document_to_search = request.args.get('document', '')
-    status, document, message, imagebase64, estado, entidad, regimen =  asyncio.run(adres_search(document_to_search))
+    status, document, message, imagebase64, estado, entidad, regimen, nombres =  asyncio.run(adres_search(document_to_search))
     my_dict = {
         "status": status,
         "document": document,
@@ -189,6 +195,12 @@ def login():
         "entidad": entidad,
         "regimen": regimen
     }
+    if (nombres != None):
+        my_dict["pnombre"]= nombres["pnombre"] if "pnombre" in nombres else ""
+        my_dict["snombre"]=nombres["snombre"] if "snombre" in nombres else ""
+        my_dict["papellido"]=nombres["papellido"] if "papellido" in nombres else ""
+        my_dict["sapellido"]=nombres["sapellido"] if "sapellido" in nombres else ""
+
     if status=="SUCCESS":
         return jsonify(my_dict), 200
     else:
