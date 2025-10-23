@@ -2,7 +2,7 @@ import asyncio
 from pydoll.browser.chromium import Chrome
 from pydoll.exceptions import ElementNotFound
 from PIL import Image, ImageChops
-import image_utils, nombres_utils
+import nombres_utils
 from google import genai
 import imagehash
 from flask import Flask, request, jsonify
@@ -11,8 +11,9 @@ import base64
 import logging
 import os
 
-GEMINI_MODEL=os.environ["MODEL"] 
+GEMINI_MODEL=os.environ["MODEL"]
 API_KEY = os.environ["GEMINI_API"]
+CHROME_PATH = os.environ["CHROME_PATH"]
 
 app = Flask(__name__)
 
@@ -22,7 +23,7 @@ async def adres_search(cc):
     async with Chrome() as browser:
         
         options = browser.options
-        options.binary_location = '/usr/bin/google-chrome-stable'
+        options.binary_location = CHROME_PATH
         # https://peter.sh/experiments/chromium-command-line-switches/#disable-popup-blocking
         options.add_argument('--headless')
         options.add_argument('--no-sandbox')
@@ -169,7 +170,7 @@ async def captcha_solve(browser, tab):
 
     # 6. Print the response
     app.logger.info("--- Gemini Analysis --->"+code)
-    return response.text
+    return code
     
 
 def trim(im):

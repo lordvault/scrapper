@@ -1,0 +1,20 @@
+FROM alpine:3.19
+
+# Installs latest Chromium package.
+RUN apk upgrade --no-cache --available \
+    && apk add --no-cache \
+      chromium-swiftshader python3 py3-pip ttf-freefont font-noto-emoji
+
+RUN apk add --no-cache \
+      --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community \
+      font-wqy-zenhei
+ENV CHROME_PATH=/usr/bin/chromium-browser
+RUN pip3 install imagehash google-genai pydoll-python flask --break-system-packages
+#RUN pip3 install opencv-python pytesseract --break-system-packages
+RUN mkdir scrapperpy
+RUN mkdir scrapperpy/results
+RUN cd scrapperpy
+WORKDIR /scrapperpy
+COPY *.py .
+COPY *.json .
+ENTRYPOINT [ "python3", "/scrapperpy/hello_world.py" ]
