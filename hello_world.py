@@ -91,7 +91,7 @@ async def adres_search(cc):
             try:
                 error_message = await tab_respuesta.find(tag_name="span",id="lblError")
                 is_visible = await error_message.is_visible()
-            except genai.errors.ClientError:
+            except ElementNotFound:
                 is_visible: False
             else:
                 is_visible: True
