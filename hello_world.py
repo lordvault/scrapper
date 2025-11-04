@@ -53,9 +53,16 @@ async def adres_search(cc):
             await consult_button.click()
             await asyncio.sleep(2)
             
-            error_message = await tab.find(tag_name="span",id="Capcha_ctl00")
-            is_visible = await error_message.is_visible()
+            is_visible = False
             tries+=1
+            error_message=""
+            try:
+                error_message = await tab.find(tag_name="span",id="Capcha_ctl00")
+                is_visible = await error_message.is_visible()
+            except ElementNotFound:
+                is_visible: False
+            else:
+                is_visible: True
 
             if not is_visible:
                 break
@@ -84,7 +91,7 @@ async def adres_search(cc):
             try:
                 error_message = await tab_respuesta.find(tag_name="span",id="lblError")
                 is_visible = await error_message.is_visible()
-            except ElementNotFound:
+            except genai.errors.ClientError:
                 is_visible: False
             else:
                 is_visible: True
@@ -156,21 +163,27 @@ async def captcha_solve(browser, tab):
         new_im,       # The image data
         prompt     # The text prompt
     ]
+    
+    try:
+        response = client.models.generate_content(
+            model=GEMINI_MODEL, 
+            contents=contents
+        )
+        code="00000"
+        if response.text==None:
+            code = "00000" 
+        else:
+            code= response.text
+        new_im.save('results/'+hash_value+'('+code+').png')
 
-    response = client.models.generate_content(
-        model=GEMINI_MODEL, 
-        contents=contents
-    )
-    code="00000"
-    if response.text==None:
-        code = "00000" 
-    else:
-        code= response.text
-    new_im.save('results/'+hash_value+'('+code+').png')
+        # 6. Print the response
+        app.logger.info("--- Gemini Analysis --->"+code)
+        return code
+    except Exception as e:  # Catch a broader range of exceptions
+        print(f"An ground_data error occurred: {str(e)}")
+        return "00000"
 
-    # 6. Print the response
-    app.logger.info("--- Gemini Analysis --->"+code)
-    return code
+
     
 
 def trim(im):
