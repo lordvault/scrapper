@@ -38,14 +38,14 @@ async def adres_search(cc):
             await tab.enable_page_events()
             await tab.go_to('https://aplicaciones.adres.gov.co/bdua_internet/Pages/ConsultarAfiliadoWeb.aspx')
             await asyncio.sleep(5)
-
+            browser_id = await browser.get_window_id()
             
             search_box = await tab.find(tag_name="input", id='txtNumDoc')
             await search_box.type_text(cc)
 
             tries = 0
             while True:
-                app.logger.info(cc+"-Try "+str(tries)+"/3")
+                app.logger.info(cc+"-Browser"+str(browser_id)+"-Try "+str(tries)+"/3")
                 captcha_text = await captcha_solve(browser, tab)
                 captcha_box = await tab.find(tag_name="input", id='Capcha_CaptchaTextBox')
                 await captcha_box.type_text(captcha_text)
