@@ -34,96 +34,102 @@ async def adres_search(cc):
         options.add_argument('--disable-popup-blocking')
 
         tab = await browser.start()
-        await tab.enable_page_events()
-        await tab.go_to('https://aplicaciones.adres.gov.co/bdua_internet/Pages/ConsultarAfiliadoWeb.aspx')
-        await asyncio.sleep(5)
+        try: 
+            await tab.enable_page_events()
+            await tab.go_to('https://aplicaciones.adres.gov.co/bdua_internet/Pages/ConsultarAfiliadoWeb.aspx')
+            await asyncio.sleep(5)
 
-        
-        search_box = await tab.find(tag_name="input", id='txtNumDoc')
-        await search_box.type_text(cc)
-
-        tries = 0
-        while True:
-            app.logger.info(cc+"-Try "+str(tries)+"/3")
-            captcha_text = await captcha_solve(browser, tab)
-            captcha_box = await tab.find(tag_name="input", id='Capcha_CaptchaTextBox')
-            await captcha_box.type_text(captcha_text)
-
-            consult_button = await tab.find(tag_name="input", id='btnConsultar')
-            await consult_button.click()
-            await asyncio.sleep(2)
             
-            is_visible = False
-            tries+=1
-            error_message=""
-            try:
-                error_message = await tab.find(tag_name="span",id="Capcha_ctl00")
-                is_visible = await error_message.is_visible()
-            except ElementNotFound:
-                is_visible: False
-            else:
-                is_visible: True
+            search_box = await tab.find(tag_name="input", id='txtNumDoc')
+            await search_box.type_text(cc)
 
-            if not is_visible:
-                break
-            if tries >= 3:
-                await tab.close()
-                await browser.stop()
-                return "ERROR",cc,"Captcha no solucionado", None, None, None, None, None
+            tries = 0
+            while True:
+                app.logger.info(cc+"-Try "+str(tries)+"/3")
+                captcha_text = await captcha_solve(browser, tab)
+                captcha_box = await tab.find(tag_name="input", id='Capcha_CaptchaTextBox')
+                await captcha_box.type_text(captcha_text)
+
+                consult_button = await tab.find(tag_name="input", id='btnConsultar')
+                await consult_button.click()
+                await asyncio.sleep(2)
+                
+                is_visible = False
+                tries+=1
+                error_message=""
+                try:
+                    error_message = await tab.find(tag_name="span",id="Capcha_ctl00")
+                    is_visible = await error_message.is_visible()
+                except ElementNotFound:
+                    is_visible: False
+                else:
+                    is_visible: True
+
+                if not is_visible:
+                    break
+                if tries >= 3:
+                    await tab.close()
+                    await browser.stop()
+                    return "ERROR",cc,"Captcha no solucionado", None, None, None, None, None
 
 
-        tab_respuesta = None
-        tabs_opened = await browser.get_opened_tabs()
-        for target in tabs_opened:
-            current_url = await target.current_url
-            if "RespuestaConsulta" in current_url:
-                tab_respuesta = target
+            tab_respuesta = None
+            tabs_opened = await browser.get_opened_tabs()
+            for target in tabs_opened:
+                current_url = await target.current_url
+                if "RespuestaConsulta" in current_url:
+                    tab_respuesta = target
 
-        
-        if tab_respuesta is not None:
-            current_url = await tab_respuesta.current_url
-            app.logger.info(current_url)
-            await tab_respuesta.bring_to_front()
-            base64_screenshot = await tab_respuesta.take_screenshot(as_base64=True, beyond_viewport=True, quality=20)
+            
+            if tab_respuesta is not None:
+                current_url = await tab_respuesta.current_url
+                app.logger.info(current_url)
+                await tab_respuesta.bring_to_front()
+                base64_screenshot = await tab_respuesta.take_screenshot(as_base64=True, beyond_viewport=True, quality=20)
 
-            is_visible = False
+                is_visible = False
 
-            try:
-                error_message = await tab_respuesta.find(tag_name="span",id="lblError")
-                is_visible = await error_message.is_visible()
-            except ElementNotFound:
-                is_visible: False
-            else:
-                is_visible: True
+                try:
+                    error_message = await tab_respuesta.find(tag_name="span",id="lblError")
+                    is_visible = await error_message.is_visible()
+                except ElementNotFound:
+                    is_visible: False
+                else:
+                    is_visible: True
 
-            if is_visible:
-                error_value = await error_message.text
-                await tab_respuesta.close()
-                await tab.close()
-                await browser.stop()
-                return "SUCCESS", cc, error_value, base64_screenshot, None, None, None, None
-            else:
-                estado_tag = await tab_respuesta.query('//*[@id="GridViewAfiliacion"]/tbody/tr[2]/td[1]')
-                entidad_tag = await tab_respuesta.query('//*[@id="GridViewAfiliacion"]/tbody/tr[2]/td[2]')
-                regimen_tag = await tab_respuesta.query('//*[@id="GridViewAfiliacion"]/tbody/tr[2]/td[3]')
-                nombres_tag = await tab_respuesta.query('//*[@id="GridViewBasica"]/tbody/tr[4]/td[2]')
-                apellidos_tag = await tab_respuesta.query('//*[@id="GridViewBasica"]/tbody/tr[5]/td[2]')
+                if is_visible:
+                    error_value = await error_message.text
+                    await tab_respuesta.close()
+                    await tab.close()
+                    await browser.stop()
+                    return "SUCCESS", cc, error_value, base64_screenshot, None, None, None, None
+                else:
+                    estado_tag = await tab_respuesta.query('//*[@id="GridViewAfiliacion"]/tbody/tr[2]/td[1]')
+                    entidad_tag = await tab_respuesta.query('//*[@id="GridViewAfiliacion"]/tbody/tr[2]/td[2]')
+                    regimen_tag = await tab_respuesta.query('//*[@id="GridViewAfiliacion"]/tbody/tr[2]/td[3]')
+                    nombres_tag = await tab_respuesta.query('//*[@id="GridViewBasica"]/tbody/tr[4]/td[2]')
+                    apellidos_tag = await tab_respuesta.query('//*[@id="GridViewBasica"]/tbody/tr[5]/td[2]')
 
-                estado  = await estado_tag.text
-                entidad = await entidad_tag.text
-                regimen = await regimen_tag.text
-                nombres = await nombres_tag.text
-                apellidos = await apellidos_tag.text
+                    estado  = await estado_tag.text
+                    entidad = await entidad_tag.text
+                    regimen = await regimen_tag.text
+                    nombres = await nombres_tag.text
+                    apellidos = await apellidos_tag.text
 
-                await tab_respuesta.close()
-                await tab.close()
-                await browser.stop()
-                nombre_completo = nombres +" "+ apellidos
-                app.logger.info(nombre_completo)
-                return "SUCCESS", cc, "", base64_screenshot, estado, entidad, regimen, nombres_utils.parsearNombre(nombre_completo)
-        
+                    await tab_respuesta.close()
+                    await tab.close()
+                    await browser.stop()
+                    nombre_completo = nombres +" "+ apellidos
+                    app.logger.info(nombre_completo)
+                    return "SUCCESS", cc, "", base64_screenshot, estado, entidad, regimen, nombres_utils.parsearNombre(nombre_completo)
+            
 
-        await asyncio.sleep(3)
+            await asyncio.sleep(3)
+        except Exception as e:  # Catch a broader range of exceptions
+            print(f"An general error occurred: {str(e)}")
+            await tab.close()
+            await browser.stop()
+            return "ERROR",cc,"General error", None, None, None, None, None
         
         #https://pyimagesearch.com/2021/11/15/tesseract-page-segmentation-modes-psms-explained-how-to-improve-your-ocr-accuracy/
         
