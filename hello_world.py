@@ -10,6 +10,8 @@ from io import BytesIO
 import base64
 import logging
 import os
+import signal
+import subprocess
 
 GEMINI_MODEL=os.environ["MODEL"]
 API_KEY = os.environ["GEMINI_API"]
@@ -190,6 +192,60 @@ async def captcha_solve(browser, tab):
         return "00000"
 
 
+def kill_chrome_processes():
+    """ Gemini
+    Identifies and kills all Chrome/Chromium processes running on the system.
+    This script is designed for Linux environments (like Docker containers).
+    """
+    print("🔍 Searching for running Chrome/Chromium processes...")
+    
+    try:
+        # Use 'pgrep' to find PIDs of processes matching 'chrome' or 'chromium'
+        # -f flag matches against the full command line
+        # Use subprocess.run for better control and error handling than os.popen
+        result = subprocess.run(
+            ['pgrep', '-f', '(chrome|chromium)'],
+            capture_output=True,
+            text=True,
+            check=False # Don't raise error if pgrep finds no process
+        )
+        
+        # Check if any PIDs were found
+        if not result.stdout:
+            print("✅ No Chrome/Chromium processes found. All good!")
+            return
+
+        # Split the output (PIDs are separated by newlines)
+        pids = result.stdout.strip().split('\n')
+        
+        # Filter out empty strings which might occur if output is weird
+        pids = [pid for pid in pids if pid] 
+        
+        # Try to kill each process
+        for pid_str in pids:
+            try:
+                pid = int(pid_str)
+                # Use SIGTERM (15) for graceful shutdown first
+                os.kill(pid, signal.SIGTERM) 
+                print(f"👋 Sent SIGTERM to process ID (PID): {pid}")
+            except ValueError:
+                # Should not happen if pgrep works correctly
+                print(f"⚠️ Failed to parse PID: {pid_str}")
+            except ProcessLookupError:
+                # Process might have already terminated
+                print(f"ℹ️ Process ID {pid} already terminated.")
+            except Exception as e:
+                print(f"❌ Error killing process {pid}: {e}")
+
+        # You might want to add a small delay and a second pass with SIGKILL 
+        # for processes that don't terminate gracefully, but be cautious with SIGKILL (9)!
+        
+        print(f"\n✨ Termination attempt complete for {len(pids)} processes.")
+
+    except FileNotFoundError:
+        print("🚨 Error: 'pgrep' command not found. Are you running on a standard Linux environment?")
+    except Exception as e:
+        print(f"❌ An unexpected error occurred: {e}")
     
 
 def trim(im):
@@ -202,7 +258,7 @@ def trim(im):
     if bbox:
         return im.crop(bbox)
 
-@app.route('/login', methods=['GET'])
+@app.route('/search', methods=['GET'])
 def login():
     document_to_search = request.args.get('document', '')
     status, document, message, imagebase64, estado, entidad, regimen, nombres =  asyncio.run(adres_search(document_to_search))
@@ -225,6 +281,11 @@ def login():
         return jsonify(my_dict), 200
     else:
         return jsonify(my_dict), 500
+    
+
+@app.route('/kill', methods=['GET'])
+def kill():
+    kill_chrome_processes()
 
 if __name__ == "__main__":
     app.run(debug=False, host='0.0.0.0', port=19999)
