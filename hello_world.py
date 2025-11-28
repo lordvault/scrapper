@@ -285,7 +285,12 @@ def login():
 
 @app.route('/kill', methods=['GET'])
 def kill():
-    kill_chrome_processes()
+    
+    try:
+        kill_chrome_processes()
+        return jsonify({ "status": "ok",}), 200
+    except Exception as e:
+        return jsonify({ "status": "error",}), 500
 
 if __name__ == "__main__":
     app.run(debug=False, host='0.0.0.0', port=19999)
