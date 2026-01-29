@@ -38,7 +38,8 @@ async def adres_search(cc):
         tab = await browser.start()
         try: 
             await tab.enable_page_events()
-            await tab.go_to('https://aplicaciones.adres.gov.co/bdua_internet/Pages/ConsultarAfiliadoWeb.aspx')
+            await tab.enable_auto_solve_cloudflare_captcha()
+            await tab.go_to('https://aplicaciones.adres.gov.co/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx')
             await asyncio.sleep(5)
             browser_id = await browser.get_window_id()
             
@@ -48,9 +49,9 @@ async def adres_search(cc):
             tries = 0
             while True:
                 app.logger.info(cc+"-Browser"+str(browser_id)+"-Try "+str(tries)+"/3")
-                captcha_text = await captcha_solve(browser, tab)
-                captcha_box = await tab.find(tag_name="input", id='Capcha_CaptchaTextBox')
-                await captcha_box.type_text(captcha_text)
+                # aptcha_text = await captcha_solve(browser, tab)
+                # captcha_box = await tab.find(tag_name="input", id='Capcha_CaptchaTextBox')
+                # await captcha_box.type_text(captcha_text)
 
                 consult_button = await tab.find(tag_name="input", id='btnConsultar')
                 await consult_button.click()
